@@ -51,18 +51,8 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Date;
-import java.util.LinkedHashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
-import java.util.Properties;
-import java.util.Set;
 
 import org.apache.commons.io.filefilter.AgeFileFilter;
 import org.apache.commons.io.filefilter.TrueFileFilter;
@@ -1861,7 +1851,14 @@ public abstract class AbstractFlexCompilerMojo<CFG, C extends AbstractFlexCompil
 
     protected File getCompilerOutput()
     {
-        File output = new File( getTargetDirectory(), getFinalName() + "." + getProjectType() );
+        File output;
+        // The FlexJS compiler creates zip-files.
+        if("FlexJS".equals(compilerName)) {
+            output = new File( getTargetDirectory(), getFinalName() );
+        }
+        else {
+            output = new File( getTargetDirectory(), getFinalName() + "." + getProjectType() );
+        }
         output.getParentFile().mkdirs();
         return output;
     }
@@ -2198,7 +2195,11 @@ public abstract class AbstractFlexCompilerMojo<CFG, C extends AbstractFlexCompil
     {
         synchronized ( lock )
         {
-            return Collections.singletonList( getGlobalArtifact() );
+            Artifact globalArtifact = getGlobalArtifact();
+            if(globalArtifact != null) {
+                return Collections.singletonList( globalArtifact );
+            }
+            return Collections.emptySet();
         }
     }
 
@@ -2487,7 +2488,9 @@ public abstract class AbstractFlexCompilerMojo<CFG, C extends AbstractFlexCompil
 
         if ( dir == null )
         {
-            return this.namespaces;
+            getLog().error("Could not find framework. Namespaces not included in configuration; " +
+                    "errors in the build may occur.");
+            return namespaces.toArray( new INamespace[namespaces.size()] );
         }
 
         Reader cfg = null;
@@ -2878,6 +2881,9 @@ public abstract class AbstractFlexCompilerMojo<CFG, C extends AbstractFlexCompil
         }
 
         Artifact global = getGlobalArtifact();
+        if(global == null) {
+            return null;
+        }
 
         // If flashVersion is not explicitly set, get the
         // flashVersion from the used global artifact.
@@ -3083,7 +3089,6 @@ public abstract class AbstractFlexCompilerMojo<CFG, C extends AbstractFlexCompil
         return verifyDigests;
     }
 
-    @Override
     public Boolean getAdvancedTelemetry() {
         return advancedTelemetry;
     }
@@ -3363,10 +3368,17 @@ public abstract class AbstractFlexCompilerMojo<CFG, C extends AbstractFlexCompil
     @SuppressWarnings( "unchecked" )
     private File resolveThemeFile( String artifactName )
     {
+        if(getFrameworkGroupId() == null) {
+            return null;
+        }
+
         File themeArtifact;
         final String themeGroupId = getFrameworkGroupId() + ".themes";
         final String themeArtifactId = artifactName;
         final String themeVersion = getFrameworkVersion();
+        if(themeVersion == null) {
+            return null;
+        }
         try
         {
             // first try to get the artifact from maven local repository for the appropriated flex version

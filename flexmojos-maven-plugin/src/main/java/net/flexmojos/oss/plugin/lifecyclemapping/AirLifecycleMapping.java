@@ -35,7 +35,7 @@ public class AirLifecycleMapping
     @Override
     protected String getPackage()
     {
-        return "net.flexmojos.oss:flexmojos-maven-plugin:sign-air";
+        return "net.flexmojos.oss:flexmojos-maven-plugin:package-air";
     }
 
 }
